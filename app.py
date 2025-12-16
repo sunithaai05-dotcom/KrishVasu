@@ -710,7 +710,7 @@ if uploaded is not None:
     df_edit.to_csv(out_buf, index=False)
     st.download_button("⬇️ Download categorized CSV", out_buf.getvalue(), file_name="categorized_transactions.csv", mime="text/csv")
     
-   else:
+else:
     st.info("Upload a CSV to begin. You can download the sample from the sidebar.")
 
 st.caption("Local-only prototype. No data leaves your machine.")
