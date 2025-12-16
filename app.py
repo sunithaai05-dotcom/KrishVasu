@@ -541,7 +541,7 @@ def budget_prompt(df: pd.DataFrame, selected_month: str, text: str):
 # -------------------------------
 # UI
 # -------------------------------
-st.title("💸 AI Personal Finance Tracker (Prototype)")
+st.title("💸 Finovo-Your Finance Buddy")
 st.caption("Educational demo. Not financial advice. Your data stays local.")
 
 with st.sidebar:
