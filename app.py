@@ -712,6 +712,8 @@ if uploaded is not None:
     st.download_button("⬇️ Download categorized CSV", out_buf.getvalue(), file_name="categorized_transactions.csv", mime="text/csv")
 
 else:
-    st.info("Upload a CSV to begin. You    st.info("Upload a CSV to begin. You can download the sample from the sidebar.")
+   else:
+    st.info("Upload a CSV to begin. You can download the sample from the sidebar.")
 
+st.caption("Local-only prototype. No data leaves your machine.")
 
