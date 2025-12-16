@@ -1,4 +1,3 @@
-
 # app.py
 # Streamlit AI Personal Finance Tracker – with Budgeting & Investment Planner + Budget Prompts
 # Author: M365 Copilot
@@ -710,8 +709,7 @@ if uploaded is not None:
     out_buf = io.StringIO()
     df_edit.to_csv(out_buf, index=False)
     st.download_button("⬇️ Download categorized CSV", out_buf.getvalue(), file_name="categorized_transactions.csv", mime="text/csv")
-
-else:
+    
    else:
     st.info("Upload a CSV to begin. You can download the sample from the sidebar.")
 
