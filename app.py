@@ -18,7 +18,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 
-st.set_page_config(page_title="AI Personal Finance Tracker", page_icon="💸", layout="wide")
+st.set_page_config(page_title="Finovo- Ai Enabled Personal Finance Tracker", page_icon="💸", layout="wide")
 
 # -----------------------------
 # Utility & Seed Data
