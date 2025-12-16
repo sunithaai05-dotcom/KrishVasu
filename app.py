@@ -1,5 +1,5 @@
 # app.py
-# Streamlit AI Personal Finance Tracker – with Budgeting & Investment Planner + Budget Prompts
+# Streamlit  –Finovo-Your Finance Buddy
 # Author: M365 Copilot
 # Disclaimer: Educational demo only. Not financial advice. Consult a licensed advisor.
 import os
