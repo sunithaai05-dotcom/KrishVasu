@@ -1,16 +1,14 @@
 
 # app.py
-# Streamlit AI Personal Finance Tracker – with Budgeting & Investment Planner
+# Streamlit AI Personal Finance Tracker – with Budgeting & Investment Planner + Budget Prompts
 # Author: M365 Copilot
 # Disclaimer: Educational demo only. Not financial advice. Consult a licensed advisor.
-
 import os
 import io
 import re
 import json
 import calendar
 from datetime import datetime, date
-
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -18,11 +16,11 @@ from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 
-st.set_page_config(page_title="Finovo- Ai Enabled Personal Finance Tracker", page_icon="💸", layout="wide")
+st.set_page_config(page_title="Finovo-Your Finance Buddy", page_icon="💸", layout="wide")
 
-# -----------------------------
+# -------------------------------
 # Utility & Seed Data
-# -----------------------------
+# -------------------------------
 CATEGORIES = [
     "Income",
     "Rent & Housing",
@@ -76,9 +74,9 @@ SEED_LABELED = pd.DataFrame({
     ]
 })
 
-# -----------------------------
+# -------------------------------
 # ML Model (TF-IDF + LogisticRegression)
-# -----------------------------
+# -------------------------------
 @st.cache_resource
 def build_seed_model():
     pipe = Pipeline([
@@ -90,10 +88,9 @@ def build_seed_model():
 
 MODEL = build_seed_model()
 
-# -----------------------------
+# -------------------------------
 # Categorization Logic (Hybrid)
-# -----------------------------
-
+# -------------------------------
 def rule_based_category(text: str) -> str:
     if not text:
         return "Miscellaneous"
@@ -106,13 +103,11 @@ def rule_based_category(text: str) -> str:
         return "Income"
     return "Miscellaneous"
 
-
 def ml_category(text: str) -> str:
     try:
         return MODEL.predict([text])[0]
     except Exception:
         return "Miscellaneous"
-
 
 def hybrid_categorize(desc: str) -> str:
     rb = rule_based_category(desc)
@@ -120,10 +115,9 @@ def hybrid_categorize(desc: str) -> str:
         return rb
     return ml_category(desc)
 
-# -----------------------------
+# -------------------------------
 # Helper Functions
-# -----------------------------
-
+# -------------------------------
 def normalize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     # Expect columns: date, description, amount
     def getcol(name):
@@ -131,6 +125,7 @@ def normalize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             if c.lower() == name:
                 return c
         return None
+
     date_col = getcol('date')
     desc_col = getcol('description') or getcol('details') or getcol('narration')
     amount_col = getcol('amount')
@@ -147,14 +142,15 @@ def normalize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     out['direction'] = np.where(out['amount'] < 0, 'credit', 'debit')
     return out
 
-
 def compute_insights(df: pd.DataFrame) -> dict:
     insights = {}
     spend_df = df[df['amount'] > 0]
     cat_totals = spend_df.groupby('category')['amount'].sum().sort_values(ascending=False)
     insights['top_categories'] = cat_totals.head(5)
+
     monthly = spend_df.groupby(['month', 'category'])['amount'].sum().reset_index()
     insights['monthly'] = monthly
+
     # spikes
     spikes = []
     for cat in monthly['category'].unique():
@@ -174,10 +170,9 @@ def compute_insights(df: pd.DataFrame) -> dict:
     insights['spikes'] = spikes
     return insights
 
-# -----------------------------
+# -------------------------------
 # Budgeting Helpers
-# -----------------------------
-
+# -------------------------------
 def suggest_budgets(df: pd.DataFrame, months_back: int = 3) -> dict:
     """Suggest budgets based on average spend over the last N months per category."""
     spend_df = df[df['amount'] > 0].copy()
@@ -188,7 +183,6 @@ def suggest_budgets(df: pd.DataFrame, months_back: int = 3) -> dict:
     budgets = {cat: float(avg.get(cat, 0)) for cat in CATEGORIES if cat != 'Income'}
     return budgets
 
-
 def get_month_bounds(month_str: str):
     year, mon = map(int, month_str.split('-'))
     first = date(year, mon, 1)
@@ -196,10 +190,10 @@ def get_month_bounds(month_str: str):
     last = date(year, mon, days_in_month)
     return first, last, days_in_month
 
-
 def budget_progress(df: pd.DataFrame, month: str, budgets: dict):
     spend_month = df[(df['month'] == month) & (df['amount'] > 0)]
     used = spend_month.groupby('category')['amount'].sum()
+
     first, last, days_in_month = get_month_bounds(month)
     today = datetime.now().date()
     days_elapsed = (min(today, last) - first).days + 1 if today >= first else 0
@@ -222,16 +216,14 @@ def budget_progress(df: pd.DataFrame, month: str, budgets: dict):
         })
     return pd.DataFrame(rows)
 
-# -----------------------------
+# -------------------------------
 # Investment Planner (Educational)
-# -----------------------------
-
+# -------------------------------
 def monthly_income_expense(df: pd.DataFrame, month: str):
     month_df = df[df['month'] == month]
     income = -month_df[month_df['amount'] < 0]['amount'].sum()  # negatives as income
     expenses = month_df[month_df['amount'] > 0]['amount'].sum()
     return float(income), float(expenses)
-
 
 def recommended_allocation(surplus: float, profile: str):
     """Return allocation percentages by profile (no product recommendations)."""
@@ -242,7 +234,6 @@ def recommended_allocation(surplus: float, profile: str):
     }
     alloc = profiles.get(profile, profiles['Balanced'])
     return {k: round(surplus * v, 2) for k, v in alloc.items()}
-
 
 def investment_plan(df: pd.DataFrame, month: str, emergency_months: int, emergency_current: float,
                     debt_amount: float, debt_rate: float, profile: str,
@@ -256,7 +247,6 @@ def investment_plan(df: pd.DataFrame, month: str, emergency_months: int, emergen
         'surplus': surplus,
         'notes': []
     }
-
     if surplus <= 0:
         plan['notes'].append("Deficit detected. Consider reducing discretionary spending or adjusting budgets.")
         plan['allocations'] = {}
@@ -291,13 +281,11 @@ def investment_plan(df: pd.DataFrame, month: str, emergency_months: int, emergen
         plan['notes'].append("Surplus fully allocated to safety/debt priorities this month.")
     else:
         plan['notes'].append(f"Remaining surplus allocated per '{profile}' risk profile.")
-
     return plan
 
-# -----------------------------
+# -------------------------------
 # Simple Q&A
-# -----------------------------
-
+# -------------------------------
 def simple_qa(df: pd.DataFrame, q: str) -> str:
     ql = q.lower()
     month = None
@@ -334,27 +322,226 @@ def simple_qa(df: pd.DataFrame, q: str) -> str:
     df2 = df.copy()
     if month:
         df2 = df2[df2['month'] == month]
+
     spend_df = df2[df2['amount'] > 0]
 
     if 'total' in ql and 'spend' in ql:
         total = spend_df['amount'].sum()
         return f"Total spending{f' in {month}' if month else ''}: ₹{total:,.0f}"
-
     if cat:
         total = spend_df[spend_df['category'] == cat]['amount'].sum()
         return f"Spending{f' in {month}' if month else ''} on {cat}: ₹{total:,.0f}"
-
     if 'top' in ql and 'category' in ql:
         tops = spend_df.groupby('category')['amount'].sum().sort_values(ascending=False).head(5)
         return "Top categories" + (f" in {month}" if month else "") + ": " + \
                ", ".join([f"{i} (₹{v:,.0f})" for i, v in tops.items()])
-
     return "I can answer: total spending, spending by category/month, and top categories. Try: 'How much did I spend on Food in 2025-11?'"
 
-# -----------------------------
-# UI
-# -----------------------------
+# -------------------------------
+# NEW: Budget Prompt Parsing & Execution
+# -------------------------------
+# Category name normalization for prompts
+ALIAS_MAP = {
+    "food": "Food & Dining",
+    "dining": "Food & Dining",
+    "coffee": "Food & Dining",
+    "groceries": "Groceries",
+    "grocery": "Groceries",
+    "rent": "Rent & Housing",
+    "housing": "Rent & Housing",
+    "transport": "Transport",
+    "fuel": "Fuel",
+    "shopping": "Shopping",
+    "subscriptions": "Subscriptions",
+    "subscription": "Subscriptions",
+    "utilities": "Utilities & Bills",
+    "bills": "Utilities & Bills",
+    "electricity": "Utilities & Bills",
+    "health": "Healthcare",
+    "healthcare": "Healthcare",
+    "education": "Education",
+    "insurance": "Insurance",
+    "entertainment": "Entertainment",
+    "fees": "Fees & Charges",
+    "charges": "Fees & Charges",
+    "misc": "Miscellaneous",
+    "miscellaneous": "Miscellaneous",
+}
 
+def normalize_category(name: str):
+    if not name:
+        return None
+    n = name.strip().lower()
+    # Exact alias hit
+    if n in ALIAS_MAP:
+        return ALIAS_MAP[n]
+    # Try fuzzy contains (e.g., "electricity bill" -> Utilities & Bills)
+    for key, cat in ALIAS_MAP.items():
+        if key in n:
+            return cat
+    # Try exact match against CATEGORIES
+    for c in CATEGORIES:
+        if c.lower() == n:
+            return c
+    return None
+
+def parse_month_from_text(text: str):
+    text = text.lower()
+    months_map = {
+        'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04', 'may': '05', 'jun': '06',
+        'jul': '07', 'aug': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'
+    }
+    for m, num in months_map.items():
+        if m in text:
+            year = datetime.now().year
+            return f"{year}-{num}"
+    m = re.search(r"(20\d{2})-(0[1-9]|1[0-2])", text)
+    if m:
+        return m.group(0)
+    return None
+
+def parse_budget_intent(text: str) -> dict:
+    """
+    Returns a dict like:
+    {'action': 'set'|'increase'|'decrease'|'status'|'suggest'|'reset',
+     'category': 'Food & Dining'|None,
+     'amount': float|None,
+     'percent': float|None,  # e.g., 10.0 for 10%
+     'month': 'YYYY-MM'|None}
+    """
+    t = text.strip().lower()
+
+    # Default
+    intent = {'action': None, 'category': None, 'amount': None, 'percent': None, 'month': None}
+
+    # Month
+    intent['month'] = parse_month_from_text(t)
+
+    # Action keywords
+    if any(k in t for k in ["auto-suggest", "autosuggest", "suggest budgets"]):
+        intent['action'] = 'suggest'
+        return intent
+    if "reset budget" in t or "reset budgets" in t:
+        intent['action'] = 'reset'
+        return intent
+    if "status" in t or "progress" in t or "how much used" in t or "show budget" in t:
+        intent['action'] = 'status'
+    elif "set" in t or "update" in t or "budget to" in t:
+        intent['action'] = 'set'
+    elif "increase" in t or "raise" in t or "bump" in t:
+        intent['action'] = 'increase'
+    elif "decrease" in t or "reduce" in t or "cut" in t:
+        intent['action'] = 'decrease'
+
+    # Category extraction
+    m = re.search(r"(set|update|increase|decrease|raise|reduce|cut)\s+([a-z &]+)", t)
+    if m:
+        maybe_cat = m.group(2)
+        maybe_cat = re.sub(r"\s*budget.*", "", maybe_cat).strip()
+        intent['category'] = normalize_category(maybe_cat)
+
+    m2 = re.search(r"([a-z &]+)\s+budget", t)
+    if not intent['category'] and m2:
+        intent['category'] = normalize_category(m2.group(1))
+
+    # Amount detection: ₹, Rs, INR, or plain number
+    amt_match = re.search(r"(₹|rs\.?|inr)?\s*([0-9,]+(\.[0-9]+)?)", t)
+    if amt_match:
+        try:
+            amt = float(amt_match.group(2).replace(",", ""))
+            intent['amount'] = amt
+        except Exception:
+            pass
+
+    # Percent detection
+    pct_match = re.search(r"([0-9]+(\.[0-9]+)?)\s*%+", t)
+    if pct_match:
+        intent['percent'] = float(pct_match.group(1))
+
+    return intent
+
+def budget_prompt(df: pd.DataFrame, selected_month: str, text: str):
+    """Execute a budget command and return a human-readable response and optional DataFrame."""
+    if 'budgets' not in st.session_state:
+        st.session_state['budgets'] = {cat: 0.0 for cat in CATEGORIES if cat != 'Income'}
+
+    intent = parse_budget_intent(text)
+
+    action = intent['action']
+    cat = intent['category']
+    amt = intent['amount']
+    pct = intent['percent']
+    month = intent['month'] or selected_month  # fallback to current selection
+
+    if not action:
+        return "I didn't recognize that budget command. Try: ‘Set Food budget to ₹8,000’ or ‘Show budget status for Nov’.", None
+
+    if action in ('set', 'increase', 'decrease'):
+        if not cat:
+            return "Please specify a category (e.g., Food, Groceries, Utilities).", None
+        current = float(st.session_state['budgets'].get(cat, 0.0))
+        new_value = current
+
+        if action == 'set':
+            if amt is None:
+                return "Please provide a numeric amount (e.g., ₹8,000).", None
+            new_value = max(0.0, amt)
+
+        elif action == 'increase':
+            if pct is not None:
+                new_value = max(0.0, current * (1 + pct/100.0))
+            elif amt is not None:
+                new_value = max(0.0, current + amt)
+            else:
+                return "Provide either a % or ₹ amount to increase.", None
+
+        elif action == 'decrease':
+            if pct is not None:
+                new_value = max(0.0, current * (1 - pct/100.0))
+            elif amt is not None:
+                new_value = max(0.0, current - amt)
+            else:
+                return "Provide either a % or ₹ amount to decrease.", None
+
+        st.session_state['budgets'][cat] = float(new_value)
+        return f"Budget for **{cat}** updated: ₹{new_value:,.0f}.", None
+
+    if action == 'suggest':
+        suggested = suggest_budgets(df)
+        st.session_state['budgets'].update(suggested)
+        return "Budgets auto-suggested from recent averages.", None
+
+    if action == 'reset':
+        st.session_state['budgets'] = {cat: 0.0 for cat in CATEGORIES if cat != 'Income'}
+        return "All budgets reset to ₹0.", None
+
+    if action == 'status':
+        bp = budget_progress(df, month, st.session_state['budgets'])
+        if bp.empty:
+            return f"No spend data found for {month}.", None
+
+        if cat:
+            row = bp[bp['category'] == cat]
+            if row.empty:
+                return f"No budget row found for {cat} in {month}.", None
+            r = row.iloc[0]
+            msg = (
+                f"**{cat} – {month}**\n"
+                f"- Limit: ₹{r['limit']:,.0f}\n"
+                f"- Used: ₹{r['used']:,.0f} ({r['pct_used']:.0%})\n"
+                f"- Forecast EOM: ₹{r['forecast_eom']:,.0f}\n"
+                f"- Overshoot: {'Yes' if r['overshoot'] else 'No'}"
+            )
+            return msg, None
+        else:
+            styled = bp[['category','limit','used','pct_used','forecast_eom','overshoot']].copy()
+            return f"Budget status for **{month}**:", styled
+
+    return "Unhandled budget action.", None
+
+# -------------------------------
+# UI
+# -------------------------------
 st.title("💸 AI Personal Finance Tracker (Prototype)")
 st.caption("Educational demo. Not financial advice. Your data stays local.")
 
@@ -425,12 +612,11 @@ if uploaded is not None:
         with st.expander("⚠️ Spend Spikes Detected"):
             st.table(pd.DataFrame(insights['spikes']))
 
-    # -----------------------------
-    # Budgeting UI
-    # -----------------------------
+    # -------------------------------
+    # Budgets (Monthly)
+    # -------------------------------
     st.subheader("Budgets (Monthly)")
     months_available = sorted(df_edit['month'].unique())
-    default_month = months_available[-1] if months_available else None
     sel_month = st.selectbox("Select month", months_available, index=len(months_available)-1 if months_available else 0)
 
     if 'budgets' not in st.session_state:
@@ -440,7 +626,8 @@ if uploaded is not None:
     with colA:
         st.write("Enter budget limits (₹) per category for ", sel_month)
         for cat in [c for c in CATEGORIES if c != 'Income']:
-            st.session_state['budgets'][cat] = st.number_input(f"{cat}", min_value=0.0, step=100.0, value=float(st.session_state['budgets'].get(cat, 0.0)))
+            st.session_state['budgets'][cat] = st.number_input(f"{cat}", min_value=0.0, step=100.0,
+                                                               value=float(st.session_state['budgets'].get(cat, 0.0)))
     with colB:
         if st.button("Auto-suggest from recent months"):
             suggested = suggest_budgets(df_edit)
@@ -453,15 +640,31 @@ if uploaded is not None:
             'limit': '₹{:.0f}', 'used': '₹{:.0f}', 'pct_used': '{:.0%}', 'forecast_eom': '₹{:.0f}'
         }), use_container_width=True)
 
-        # Alerts
-        overs = bp[bp['overshoot']]
-        if not overs.empty:
-            st.warning("Potential overshoot by end of month:")
-            st.table(overs[['category', 'limit', 'forecast_eom']].style.format({'limit': '₹{:.0f}', 'forecast_eom': '₹{:.0f}'}))
+    # Alerts
+    overs = bp[bp['overshoot']]
+    if not overs.empty:
+        st.warning("Potential overshoot by end of month:")
+        st.table(overs[['category', 'limit', 'forecast_eom']].style.format({'limit': '₹{:.0f}', 'forecast_eom': '₹{:.0f}'}))
 
-    # -----------------------------
-    # Investment Planner
-    # -----------------------------
+    # NEW: Budget prompts (natural-language)
+    st.subheader("Budget Q&A / Commands")
+    bq = st.text_input("Try: 'Set Food budget to ₹8000', 'Increase Groceries by 10%', 'Show budget status for Nov', 'Auto-suggest budgets'")
+    if bq:
+        msg, df_out = budget_prompt(df_edit, sel_month, bq)
+        if df_out is None:
+            st.success(msg)
+        else:
+            st.success(msg)
+            st.dataframe(
+                df_out.style.format({
+                    'limit': '₹{:.0f}', 'used': '₹{:.0f}', 'pct_used': '{:.0%}', 'forecast_eom': '₹{:.0f}'
+                }),
+                use_container_width=True
+            )
+
+    # -------------------------------
+    # Investment Planner (Educational)
+    # -------------------------------
     st.subheader("Investment Planner (Educational)")
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -478,7 +681,8 @@ if uploaded is not None:
     plan = investment_plan(df_edit, sel_month, emergency_months, emergency_current,
                            debt_amount, debt_rate, profile, emergency_cap_pct, debt_cap_pct)
 
-    st.markdown(f"**Income (₹):** {plan['income']:,.0f} | **Expenses (₹):** {plan['expenses']:,.0f} | **Surplus (₹):** {plan['surplus']:,.0f}")
+    st.markdown(f"**Income (₹):** {plan['income']:,.0f}  \n**Expenses (₹):** {plan['expenses']:,.0f}  \n**Surplus (₹):** {plan['surplus']:,.0f}")
+
     if plan['surplus'] <= 0:
         st.error("No investable surplus this month. Review budgets and discretionary spend.")
     else:
@@ -492,7 +696,7 @@ if uploaded is not None:
         with st.expander("Notes & Assumptions"):
             for n in plan['notes']:
                 st.write("- ", n)
-            st.info("This planner suggests category-level allocations only (Debt/FI, Equity Index, Gold). It does not recommend specific securities or guarantee outcomes. Consider tax implications and consult a licensed advisor.")
+        st.info("This planner suggests category-level allocations only (Debt/FI, Equity Index, Gold). It does not recommend specific securities or guarantee outcomes. Consider tax implications and consult a licensed advisor.")
 
     # Q&A
     st.subheader("Ask a question")
@@ -506,8 +710,8 @@ if uploaded is not None:
     out_buf = io.StringIO()
     df_edit.to_csv(out_buf, index=False)
     st.download_button("⬇️ Download categorized CSV", out_buf.getvalue(), file_name="categorized_transactions.csv", mime="text/csv")
-else:
-    st.info("Upload a CSV to begin. You can download the sample from the sidebar.")
 
-st.caption("Local-only prototype. No data leaves your machine.")
+else:
+    st.info("Upload a CSV to begin. You    st.info("Upload a CSV to begin. You can download the sample from the sidebar.")
+
 
